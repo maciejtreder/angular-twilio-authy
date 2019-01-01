@@ -8,6 +8,10 @@ import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import * as cors from 'cors';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
+ 
+const API_KEY = '6pETMoWtOXPFBFlnw0rHIj4ZZ23HEt7D';
+const authy = require('authy')(API_KEY);
  
 enableProdMode();
  
@@ -17,6 +21,7 @@ app.use(compression());
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
  
 const {AppServerModuleNgFactory, LAZY_MODULE_MAP} = require('./dist/server/main');
  
@@ -32,10 +37,38 @@ app.set('views', './dist/browser');
  
 app.post('/auth/login', (req, res) => {
  if (req.body.login === 'foo' && req.body.password === 'bar') {
-   res.status(200).send({login: 'foo'});
+   authy.send_approval_request('115326839', {
+       message: 'Request to login to Angular two factor authentication with Twilio'
+     }, null, null,  function(err, authResponse) {
+       if (err) {
+         res.status(400).send('Bad Request');
+       } else {
+         res.status(200).send({token: authResponse.approval_request.uuid});
+       }
+   });
  } else {
    res.status(401).send('Bad credentials');
  }
+});
+ 
+app.get('/auth/status', (req, res) => {
+ authy.check_approval_status(req.headers.token, (err, authResponse) => {
+   if (err) {
+     res.status(400).send('Bad Request.');
+   } else {
+     if (authResponse.approval_request.status === 'approved') {
+       res.cookie('authentication', 'super-encrypted-value-indicating-that-user-is-authenticated!', {
+         maxAge: 5 * 60 * 60 * 60,
+         httpOnly: true
+       });
+     }
+     res.status(200).send({status: authResponse.approval_request.status});
+   }
+ });
+});
+ 
+app.get('/auth/isLogged', (req, res) => {
+ res.status(200).send({authenticated: req.cookies.authentication === 'super-encrypted-value-indicating-that-user-is-authenticated!'});
 });
  
 app.get('*.*', express.static('./dist/browser', {
