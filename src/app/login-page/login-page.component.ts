@@ -20,7 +20,7 @@ export class LoginPageComponent {
    this.authService.auth(
      this.loginForm.get('login').value,
      this.loginForm.get('password').value
-   );
+   ).subscribe();
  }
 }
 

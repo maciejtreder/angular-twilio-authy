@@ -1,0 +1,8 @@
+{
+  "universal": {
+    "project": "angular-twilio-authy",
+    "skipInstall": false,
+    "directory": ".",
+    "http": true
+  }
+}
