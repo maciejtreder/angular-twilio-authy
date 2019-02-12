@@ -24,38 +24,41 @@ export class AuthService {
    this.redirectUrl = url;
  }
  
- public auth(login: string, password: string): Observable<any> {
-   return this.http.post<any>('/auth/login', {login: login, password: password}).pipe(
-     flatMap(response => this.secondFactor(response.token) )
-   );
+ public auth(login: string, password: string, remember: boolean): Observable<any> {
+  return this.http.post<any>('/auth/login', {login: login, password: password}).pipe(
+    flatMap(response => this.secondFactor(response.token, remember) )
+  );
  }
  
- private secondFactor(token: string): Observable<any> {
-   const httpOptions = {
-     headers: new HttpHeaders({'Token':  token})
-   };
+ public secondFactor(token: string, remember: boolean): Observable<any> {
+  const httpOptions = {
+    headers: new HttpHeaders({
+      'Token': token,
+      'Remember': '' + remember
+    })
+  };
  
-   const tick: Observable<number> = timer(1000, 1000);
-   return Observable.create(subject => {
-     let tock = 0;
-     const timerSubscription = tick.subscribe(() => {
-       tock++;
-       this.http.get<any>('/auth/status', httpOptions).subscribe( response => {
-         if (response.status === 'approved') {
-           this.redirectUrl = this.redirectUrl === undefined ? '/' : this.redirectUrl;
-           this.router.navigate([this.redirectUrl]);
- 
-           this.closeSecondFactorObservables(subject, true, timerSubscription);
-         } else if (response.status === 'denied') {
-           this.closeSecondFactorObservables(subject, false, timerSubscription);
-         }
-       });
-       if (tock === 60) {
-         this.closeSecondFactorObservables(subject, false, timerSubscription);
-       }
-     });
-   });
+  const tick: Observable<number> = timer(1000, 1000);
+  return Observable.create(subject => {
+    let tock = 0;
+    const timerSubscription = tick.subscribe(() => {
+      tock++;
+      this.http.get<any>('/auth/status', httpOptions).subscribe( response => {
+        if (response.status === 'approved') {
+          this.redirectUrl = this.redirectUrl ? '/' : this.redirectUrl;
+          this.router.navigate([this.redirectUrl]);
+          this.closeSecondFactorObservables(subject, true, timerSubscription);
+        } else if (response.status === 'denied') {
+          this.closeSecondFactorObservables(subject, false, timerSubscription);
+        }
+      });
+      if (tock === 60) {
+        this.closeSecondFactorObservables(subject, false, timerSubscription);
+      }
+    });
+  });
  }
+ 
  
  public isAuthenticated(): Observable<boolean> {
    if (isPlatformServer(this.platformId)) {

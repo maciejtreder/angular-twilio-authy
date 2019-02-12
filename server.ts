@@ -10,7 +10,7 @@ import * as cors from 'cors';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
  
-const API_KEY = '6pETMoWtOXPFBFlnw0rHIj4ZZ23HEt7D';
+const API_KEY = 'Production API key';
 const authy = require('authy')(API_KEY);
  
 enableProdMode();
@@ -37,7 +37,7 @@ app.set('views', './dist/browser');
  
 app.post('/auth/login', (req, res) => {
  if (req.body.login === 'foo' && req.body.password === 'bar') {
-   authy.send_approval_request('115326839', {
+   authy.send_approval_request('authy id', {
        message: 'Request to login to Angular two factor authentication with Twilio'
      }, null, null,  function(err, authResponse) {
        if (err) {
@@ -52,19 +52,25 @@ app.post('/auth/login', (req, res) => {
 });
  
 app.get('/auth/status', (req, res) => {
- authy.check_approval_status(req.headers.token, (err, authResponse) => {
-   if (err) {
-     res.status(400).send('Bad Request.');
-   } else {
-     if (authResponse.approval_request.status === 'approved') {
-       res.cookie('authentication', 'super-encrypted-value-indicating-that-user-is-authenticated!', {
-         maxAge: 5 * 60 * 60 * 60,
-         httpOnly: true
-       });
-     }
-     res.status(200).send({status: authResponse.approval_request.status});
-   }
- });
+  authy.check_approval_status(req.headers.token, (err, authResponse) => {
+    if (err) {
+      res.status(400).send('Bad Request.');
+    } else {
+      if (authResponse.approval_request.status === 'approved') {
+        res.cookie('authentication', 'super-encrypted-value-indicating-that-user-is-authenticated!', {
+          maxAge: 5 * 60 * 60,
+          httpOnly: true
+        });
+        if (req.headers.remember === 'true') {
+         res.cookie('remember', authResponse.approval_request._authy_id, {
+           maxAge: 10 * 365 * 24 * 60 * 60,
+           httpOnly: true
+         });
+       }
+      }
+      res.status(200).send({status: authResponse.approval_request.status});
+    }
+  });
 });
  
 app.get('/auth/isLogged', (req, res) => {
