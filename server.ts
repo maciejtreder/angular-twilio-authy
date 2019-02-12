@@ -26,11 +26,12 @@ app.use(cookieParser());
 const {AppServerModuleNgFactory, LAZY_MODULE_MAP} = require('./dist/server/main');
  
 app.engine('html', ngExpressEngine({
- bootstrap: AppServerModuleNgFactory,
- providers: [
-   provideModuleMap(LAZY_MODULE_MAP)
- ]
-}));
+  bootstrap: AppServerModuleNgFactory,
+  providers: [
+    provideModuleMap(LAZY_MODULE_MAP),
+    {provide: 'API_KEY', useValue: API_KEY}
+  ]
+  }));  
  
 app.set('view engine', 'html');
 app.set('views', './dist/browser');
